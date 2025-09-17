@@ -1,0 +1,298 @@
+ACKNOWLEDGMENTS
+
+Course Materials and Resources:
+- Week 3 course materials on multi-armed bandit algorithms, including UCB1 algorithm explanation and implementation guidance
+- Course documentation on UCB1 reward normalization technique for unbounded rewards (dividing by constant c when rewards are in [0,c])
+- Course materials on Thompson sampling with beta distributions and Bernoulli reward assumptions
+- Course materials on epsilon-greedy algorithm and exploration-exploitation tradeoffs
+- Example code from materials showing UCB1 implementation patterns and bandit problem class structure
+- Course content on regret calculation methodology and performance evaluation metrics for bandit algorithms
+- Bandit Algorithms by Tor Lattimore and Csaba Szepesv´ari https://tor-lattimore.com/downloads/book/book.pdf
+- Reinforcement Learning Guide: Solving the Multi-Armed Bandit Problem from Scratch in Python by Ankit Choudhary https://www.analyticsvidhya.com/blog/2018/09/reinforcement-multi-armed-bandit-scratch-python/
+- The Multi-Armed Bandit Problem - An exploration of epsilon greedy and UCB1 By: Michelle Yun, Deric Pang, Ayaz Latif https://cse442-17f.github.io/LinUCB/
+
+Libraries Used:
+- numpy: Random number generation, statistical calculations, and array operations for reward analysis
+- matplotlib.pyplot: Data visualization for reward distribution histograms and algorithm analysis
+- pandas: Reading and writing TSV files, data manipulation for actions.tsv processing
+- math: Mathematical functions for UCB1 confidence bound calculations (sqrt, log functions)
+
+Python Standard Library:
+- Built-in functions (min, max, sum) for statistical calculations
+- File I/O operations for writing TSV and TXT output files
+
+Generative AI Assistance:
+- AI helped with TSV file formatting:
+
+prompt: can you give me an exmaple of how to write to a tsv file in python
+response: Here's a simple example of writing to a TSV (Tab-Separated Values) file in Python:
+Using the csv module (recommended):
+pythonimport csv
+
+# Sample data
+data = [
+    ['Name', 'Age', 'City'],
+    ['Alice', '25', 'New York'],
+    ['Bob', '30', 'San Francisco'],
+    ['Charlie', '35', 'Chicago']
+]
+
+# Write to TSV file
+with open('output.tsv', 'w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file, delimiter='	')
+    writer.writerows(data)
+Alternative method using basic file operations:
+python# Sample data as list of dictionaries
+people = [
+    {'Name': 'Alice', 'Age': 25, 'City': 'New York'},
+    {'Name': 'Bob', 'Age': 30, 'City': 'San Francisco'},
+    {'Name': 'Charlie', 'Age': 35, 'City': 'Chicago'}
+]
+
+with open('output.tsv', 'w', encoding='utf-8') as file:
+    # Write header
+    headers = list(people[0].keys())
+    file.write('	'.join(headers) + '
+')
+
+    # Write data rows
+    for person in people:
+        row = [str(person[key]) for key in headers]
+        file.write('	'.join(row) + '
+')
+For pandas DataFrames:
+pythonimport pandas as pd
+
+# Create a DataFrame
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Age': [25, 30, 35],
+    'City': ['New York', 'San Francisco', 'Chicago']
+})
+
+# Write to TSV
+df.to_csv('output.tsv', sep='	', index=False)
+The csv module approach is generally preferred because it handles edge cases like data containing tabs or newlines properly by escaping them.
+
+prompt: can you give me an example of how to read a tsv file using pandas in python
+response: Here's how to read a TSV file using pandas in Python:
+Basic example:
+pythonimport pandas as pd
+
+# Read TSV file
+df = pd.read_csv('data.tsv', sep='	')
+
+# Display the data
+print(df)
+print(df.head())  # Show first 5 rows
+With common options:
+pythonimport pandas as pd
+
+# Read TSV with additional options
+df = pd.read_csv(
+    'data.tsv',
+    sep='	',                    # Tab separator
+    encoding='utf-8',            # Specify encoding
+    header=0,                    # First row contains column names
+    index_col=None,              # Don't use any column as index
+    na_values=['', 'NULL', 'N/A'] # Values to treat as NaN
+)
+
+print(df.info())  # Show data types and info
+print(df.head())
+Handling files without headers:
+pythonimport pandas as pd
+
+# If TSV file has no header row
+df = pd.read_csv(
+    'data.tsv',
+    sep='	',
+    header=None,  # No header row
+    names=['Name', 'Age', 'City']  # Specify column names
+)
+
+print(df)
+With data type specification:
+pythonimport pandas as pd
+
+# Specify data types for better performance and accuracy
+df = pd.read_csv(
+    'data.tsv',
+    sep='	',
+    dtype={
+        'Name': 'string',
+        'Age': 'int64',
+        'City': 'string'
+    }
+)
+
+print(df.dtypes)  # Check data types
+print(df)
+Handling large files (reading in chunks):
+pythonimport pandas as pd
+
+# For very large files, read in chunks
+chunk_size = 1000
+for chunk in pd.read_csv('large_data.tsv', sep='	', chunksize=chunk_size):
+    # Process each chunk
+    print(f"Processing chunk with {len(chunk)} rows")
+    # Your processing logic here
+The sep='	' parameter is the key difference from reading CSV files - it tells pandas to use tabs as the delimiter instead of commas.
+
+- AI was also used in understanding a generic example of how UCB1 is implemented in python
+prompt: can you give me a general example of how UCB1 is typically implemented for multi-armed bandit problems?
+response: 
+Here's a typical implementation of the UCB1 algorithm for multi-armed bandit problems in Python:
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+class UCB1Bandit:
+    def __init__(self, n_arms):
+        """
+        Initialize UCB1 bandit algorithm
+
+        Args:
+            n_arms: Number of arms (actions) available
+        """
+        self.n_arms = n_arms
+        self.counts = np.zeros(n_arms)  # Number of times each arm was pulled
+        self.values = np.zeros(n_arms)  # Average reward for each arm
+        self.total_count = 0
+
+    def select_arm(self):
+        """
+        Select an arm using UCB1 algorithm
+
+        Returns:
+            Selected arm index
+        """
+        # If any arm hasn't been tried, select it first
+        for arm in range(self.n_arms):
+            if self.counts[arm] == 0:
+                return arm
+
+        # Calculate UCB1 values for all arms
+        ucb_values = np.zeros(self.n_arms)
+        for arm in range(self.n_arms):
+            # UCB1 formula: average_reward + sqrt(2 * ln(total_pulls) / arm_pulls)
+            confidence_interval = np.sqrt(2 * np.log(self.total_count) / self.counts[arm])
+            ucb_values[arm] = self.values[arm] + confidence_interval
+
+        # Select arm with highest UCB1 value
+        return np.argmax(ucb_values)
+
+    def update(self, chosen_arm, reward):
+        """
+        Update the bandit's knowledge after receiving a reward
+
+        Args:
+            chosen_arm: Index of the arm that was pulled
+            reward: Reward received from pulling the arm
+        """
+        self.counts[chosen_arm] += 1
+        self.total_count += 1
+
+        # Update running average: new_avg = old_avg + (new_value - old_avg) / count
+        n = self.counts[chosen_arm]
+        self.values[chosen_arm] = ((n - 1) / n) * self.values[chosen_arm] + (1 / n) * reward
+
+    def get_arm_info(self):
+        """Return current arm statistics"""
+        return {
+            'counts': self.counts.copy(),
+            'values': self.values.copy(),
+            'total_count': self.total_count
+        }
+
+# Example usage with simulation
+def simulate_bandit_problem():
+    """Simulate a multi-armed bandit problem"""
+
+    # True reward probabilities for each arm (unknown to the algorithm)
+    true_rewards = [0.1, 0.3, 0.7, 0.2, 0.5]  # Arm 2 is best
+    n_arms = len(true_rewards)
+    n_rounds = 1000
+
+    # Initialize UCB1 bandit
+    bandit = UCB1Bandit(n_arms)
+
+    # Track results
+    chosen_arms = []
+    rewards_received = []
+    cumulative_rewards = []
+    cumulative_reward = 0
+
+    # Run simulation
+    for round in range(n_rounds):
+        # Select arm using UCB1
+        chosen_arm = bandit.select_arm()
+
+        # Simulate reward (Bernoulli trial with true probability)
+        reward = np.random.random() < true_rewards[chosen_arm]
+
+        # Update bandit's knowledge
+        bandit.update(chosen_arm, reward)
+
+        # Track results
+        chosen_arms.append(chosen_arm)
+        rewards_received.append(reward)
+        cumulative_reward += reward
+        cumulative_rewards.append(cumulative_reward)
+
+    return {
+        'bandit': bandit,
+        'chosen_arms': chosen_arms,
+        'rewards': rewards_received,
+        'cumulative_rewards': cumulative_rewards,
+        'true_rewards': true_rewards
+    }
+
+# Run simulation
+if __name__ == "__main__":
+    results = simulate_bandit_problem()
+    bandit = results['bandit']
+
+    print("UCB1 Multi-Armed Bandit Results")
+    print("=" * 40)
+    print(f"Total rounds: {bandit.total_count}")
+    print(f"True reward rates: {results['true_rewards']}")
+    print(f"Estimated reward rates: {bandit.values}")
+    print(f"Arm selection counts: {bandit.counts}")
+    print(f"Total reward: {results['cumulative_rewards'][-1]}")
+
+    # Calculate regret (difference from optimal strategy)
+    optimal_reward = bandit.total_count * max(results['true_rewards'])
+    actual_reward = results['cumulative_rewards'][-1]
+    regret = optimal_reward - actual_reward
+    print(f"Regret: {regret:.1f} (vs always picking best arm)")
+
+    # Show which arm was selected most often
+    best_arm_index = np.argmax(bandit.counts)
+    true_best_arm = np.argmax(results['true_rewards'])
+    print(f"Most selected arm: {best_arm_index} (true best: {true_best_arm})")
+
+This implementation demonstrates the key components of UCB1:
+Core Algorithm Components:
+
+Initialization: Track counts and average rewards for each arm
+Arm Selection: Use the UCB1 formula to balance exploration and exploitation
+Knowledge Update: Update statistics after each reward
+
+UCB1 Formula:
+The algorithm selects the arm with the highest UCB1 value:
+UCB1(i) = μᵢ + √(2 ln(t) / nᵢ)
+Where:
+
+μᵢ = average reward for arm i
+t = total number of pulls
+nᵢ = number of times arm i was pulled
+
+Key Features:
+Exploration vs Exploitation: The confidence interval (square root term) ensures exploration of less-tried arms, while the average reward term drives exploitation of promising arms.
+Theoretical Guarantees: UCB1 has proven logarithmic regret bounds, meaning it converges to optimal performance.
+Automatic Balancing: As arms are pulled more often, their confidence intervals shrink, naturally shifting from exploration to exploitation.
+The simulation shows how UCB1 gradually learns which arms are best and converges toward selecting the optimal arm most frequently. You can run this code to see how it performs across different scenarios!
+
+- All algorithm selection and implementation decisions were guided by course materials and requirements
+No collaboration with other students occurred on this assignment.
